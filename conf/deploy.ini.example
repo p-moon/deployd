@@ -1,0 +1,170 @@
+[global]
+code_home = /root/workspace/code 
+doc_home  = /root/workspace/document
+relay     = relay.xxx.cc
+otp_key   = "YOUR-OTP-KEY"
+username  = "YOUR-USER-NAME"
+userpass  = "YOUR-PASS-WORD"
+odp_path  = /home/homework
+my_machine= test311
+
+
+[test311]
+machine  = homework@192.168.241.131
+password = MhxzKhl
+relay    = true
+
+[test30]
+machine  = homework@192.168.240.91
+password = MhxzKhl
+relay    = true
+
+[test13]
+machine  = homework@192.168.240.90
+password =
+relay    = true
+
+[test5]
+machine  = homework@192.168.240.89 
+password =
+relay    = true
+
+
+[online]
+machine  = rd@192.168.0.122
+password = 
+relay    = true
+
+[tips]
+machine  = rd@192.168.9.3
+password = 
+relay    = true
+
+[tips2]
+machine  = rd@192.168.7.171
+password = 
+relay    = true
+
+[qatest28]
+machine  = homework@192.168.240.188
+password = 
+relay    = true
+
+
+[qatest14]
+machine  = homework@192.168.240.112
+password =
+relay    = false
+
+[qatest39]
+machine  = homework@192.168.241.29
+password =  
+relay    = true
+
+[dbnative]
+machine  = homework@192.168.240.90
+password =
+relay    = true
+command  = dbnativeapp
+
+
+[dbmacan]
+machine  = homework@192.168.240.90
+password =
+relay    = true
+command  = dbzybmacan
+
+[dbsupport]
+machine  = homework@192.168.240.90
+password =
+relay    = true
+command  = dbzybsupport
+
+[dbuser]
+machine  = homework@192.168.240.90
+password =
+relay    = true
+command  = dbzybuser
+
+[dbucenter]
+machine  = homework@192.168.240.90
+password =
+relay    = true
+command  = dbucenter
+
+
+[dbgame]
+machine  = homework@192.168.240.90
+password =
+relay    = true
+command  = dbzybgame
+
+[dbfriend]
+machine  = homework@192.168.240.90
+password =
+relay    = true
+command  = dbfriend
+
+[dbhomework]
+machine  = homework@192.168.240.90
+password =
+relay    = true
+command  = dbhomework
+
+
+[dbpractice]
+machine  = homework@192.168.240.90
+password =
+relay    = true
+command  = dbpractice
+
+[dbdayi]
+machine  = homework@192.168.240.90
+password =
+relay    = true
+command  = dbdayi
+
+[dbfudao]
+machine  = homework@192.168.240.90
+password =
+relay    = true
+command  = dbfudao
+
+[dbcharge]
+machine  = homework@192.168.240.90
+password =
+relay    = true
+command  = dbcharge
+
+[dbsearchrecord]
+machine  = homework@192.168.240.90
+password =
+relay    = true
+command  = dbsearchrecord
+
+[dbpay]
+machine  = homework@192.168.240.90
+password =
+relay    = true
+command  = dbfudao
+
+[dbpet]
+machine  = homework@192.168.240.90
+password =
+relay    = true
+command  = dbzybpet
+
+
+[dbtest30]
+machine  = homework@192.168.241.131
+password =
+relay    = true
+command  = mysql-test30
+
+[redis-test30]
+machine  = homework@192.168.241.131
+password =
+relay    = true
+secret   =
+command  = redis-test30
+

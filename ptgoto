@@ -1,0 +1,50 @@
+#!/bin/bash
+
+source $(dirname $0)/ColorEcho.zsh
+
+MODULE_NAME=$(basename $(pwd))
+
+DEPLOY_INI=$(dirname $0)/conf/deploy.ini 
+
+DESTINATION=$1  # 入参：目标机器名
+COMMAND=$2      # 入参：登录机器后要执行的命令
+
+[ -z "$DESTINATION" ] && DESTINATION="test311"
+
+
+(tmux ls | grep $DESTINATION) && tmux a -t $DESTINATION && exit
+
+
+(tmux ls | grep $DESTINATION) || tmux new  -d -s $DESTINATION "ptgoto $DESTINATION" 
+
+tmux attach-session -t $DESTINATION  && exit
+
+METHINE=$(config $DEPLOY_INI $DESTINATION machine)                                      # 获取机器IP
+PASSWORD=$(config $DEPLOY_INI $DESTINATION password)                                    # 获取机器密码
+IS_RELAY=$(config $DEPLOY_INI $DESTINATION relay)                                       # 是否需要relay授权
+OTP_KEY=$(php $(dirname $0)/Google2FA  $(config $DEPLOY_INI global otp_key))            # 获取OTP动态口令
+USERNAME=$(config $DEPLOY_INI global username)                                          # LDAP用户名
+USERPASS=$(config $DEPLOY_INI global userpass)                                          # LDAP密码
+RELAY_ADDRESS=$(config $DEPLOY_INI global relay)                                        # 跳板机地址
+COMMAND="ssh $METHINE"
+EXEC_COMMAND=$(config $DEPLOY_INI $DESTINATION command) 
+
+echo.Green "当前的OTP动态口令为：\t \\033[4;1;93m$OTP_KEY\\033[m"
+echo.Green "是否需要relay授权：\t \\033[4;1;93m$IS_RELAY\\033[m"
+echo.Green "机器地址为：\t\t \\033[4;1;93m$METHINE\\033[m"
+echo.Green "机器密码为：\t\t \\033[4;1;93m$PASSWORD\\033[m"
+#echo.Green "执行的登录指令为：\t\t \\033[4;1;93m$EXECUTE\\033[m"
+
+
+if [ "relay" == "$DESTINATION" ]; then
+    $(dirname $0)/expect.script $OTP_KEY $USERPASS "pwd" $USERNAME $RELAY_ADDRESS "$EXEC_COMMAND"
+    exit
+fi
+
+if [ "true" == "$IS_RELAY" ]; then
+    $(dirname $0)/expect.script $OTP_KEY $USERPASS "$COMMAND" $USERNAME $RELAY_ADDRESS "$EXEC_COMMAND"
+    exit;
+fi
+
+sshpass -p $PASSWORD ssh $METHINE
+

@@ -1,0 +1,69 @@
+#!/usr/bin/expect
+
+set auth [lindex $argv 0]
+
+set pwd [lindex $argv 1]
+
+set relaycmd [lindex $argv 2]
+
+set username [lindex $argv 3]
+
+set relay [lindex $argv 4]
+
+set command [lindex $argv 5]
+
+set timeout -1
+
+set random justwaitcmd
+
+spawn ssh -o StrictHostKeyChecking=no $username@$relay 
+
+
+expect {
+    "*Verification code*" {
+        send "$auth\r"
+    }
+    eof
+    {
+        send "eof"
+    }
+}
+
+expect {
+    "*Password*" {
+        send "$pwd\r"
+    }
+    eof
+    {
+        send "eof"
+    }
+}
+
+expect {
+    "*Welcome*" {
+        send "$relaycmd\r"
+    }
+    eof
+    {
+        send "eof"
+    }
+}
+
+expect {
+    "*login*" {
+        send "$command\r"
+    }
+    eof
+    {
+        send "eof"
+    }
+}
+
+
+#expect {
+#    "$random" {
+#    
+#    }
+#}
+
+interact

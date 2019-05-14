@@ -1,0 +1,10 @@
+#!/bin/bash
+
+# $1 : 配置文件路径
+# $2 : section名称
+# $3 : 键名称
+function ini_get(){
+    sed -n "/\[$2\]/,/\[/p" $1  | sed  s/\ //g | grep -v "\[" | grep $3 | awk -F '=' '{print $2}'
+}
+
+ini_get $1 $2 $3

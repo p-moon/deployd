@@ -1,0 +1,150 @@
+#!/bin/bash
+
+source $(dirname $0)/ColorEcho.zsh
+
+
+while getopts "m:h:t:d:" arg
+do
+    case $arg in
+        m) 
+            MODE=$OPTARG  
+            ;;
+        h)
+            DESTINATION=$OPTARG
+            ;;
+        t)
+            MODIFY_TIME=$OPTARG
+            ;;
+        d)
+            DAEMON=$OPTARG
+            ;;
+        ?)  
+            MODE="all"
+            DESTINATION=""
+            MODIFY_TIME=0
+            ;;
+
+    esac
+done
+
+
+WORKSPACE=$(pwd)
+
+MODULE_NAME=$(basename $(pwd))
+
+DEPLOY_INI=$(dirname $0)/conf/deploy.ini
+
+# diff 文件名
+DIFF_NAME=diff.tar.gz
+
+
+DEFAULT_METHINE=$(config $DEPLOY_INI global my_machine) 
+
+# 若为空，则设定默认值
+[ -z "$MODE" ] && MODE="all" && DESTINATION=$1
+[ -z "$DESTINATION" ] && DESTINATION=$DEFAULT_METHINE
+[ -z "$MODIFY_TIME" ] && MODIFY_TIME=0
+
+METHINE=$(config $DEPLOY_INI $DESTINATION machine)                                        # 获取机器IP
+ODP_PATH=$(config $DEPLOY_INI $DESTINATION odp_path)                                      # 服务器上ODP的部署路径
+SECRET=$(config $DEPLOY_INI $DESTINATION secret)                                          # 获取用于计算签名的秘钥
+
+
+
+if [ -z "$ODP_PATH" ]; then
+    ODP_PATH=$(config $DEPLOY_INI global odp_path)                                     
+fi
+
+
+for((i=0; i<1; i++)); do
+    if [ $MODE = "git" ]; then
+        tar -zcvf $DIFF_NAME build.sh $(git diff --name-only)
+        break;
+    fi
+
+
+    if [ $MODE = "time" ]; then
+        FIND_MODE="-mtime"
+        if [ $MODIFY_TIME -lt 0 ]; then 
+            FIND_MODE="-mmin"
+            let MODIFY_TIME=0-$MODIFY_TIME
+        fi
+        tar -zcvf $DIFF_NAME build.sh $(find ./ $FIND_MODE $MODIFY_TIME -type f | grep -v .git)
+        break
+    fi
+done
+
+[ $MODE != "all" ] && [ -f $DIFF_NAME ] && mkdir temp && mv $DIFF_NAME temp && cd temp && tar -zxvf $DIFF_NAME && rm $DIFF_NAME
+
+# 后台常驻模式，实时检测文件改动，并同步的服务端
+[ ! -z $DAEMON ] && {
+    while : ; do
+        MODIFIED=$(find ./ -mmin 1 -type f | grep -v .git)
+        [ ! -z "$MODIFIED" ] && echo $MODIFIED  && ptdeploy -mtime -t-$DAEMON -h$DESTINATION > /dev/null
+        sleep $DAEMON
+    done
+    exit
+}
+
+source ./build.sh
+
+
+tar -zxvf $APP_NAME.tar.gz 
+rm $APP_NAME.tar.gz
+
+
+
+# 计算字符串的MD5值
+function md5(){
+    STR=$1                         # 入参，要计算MD5的字符串
+    echo -n $STR | md5sum | sed s/\ //g | sed s/-//g
+}
+
+function md5_file(){
+    FILE=$1
+    md5sum $1 | awk '{print $1}'
+}
+
+# 签名计算函数
+function getSign(){
+    FILE=$1                         # 要上传的文件路径
+    KEY=$2                          # 用于计算签名的秘钥
+    FILE_MD5=$(md5_file $FILE)      # 计算文件的MD5值
+    PLAIN_SIGN="$SECRET$FILE_MD5"
+    SIGN=$(md5 $PLAIN_SIGN)
+    echo $SIGN
+}
+
+
+# 通过fis上传某文件夹至服务器
+function uploadByFis(){
+    DIR_NAME=$1                                     # 入参：要上传的文件夹路径
+    INDEX=$2                                        # 入参：文件索引起始值，默认传0即可
+    FILE_TOTAL=$(ls -lR | grep "^-" | wc -l)        # 获取当前文件夹下共有多少文件
+    PROGRESS=0
+    for file in `ls $DIR_NAME`
+    do 
+        if [ -d $1"/"$file ] ; then
+            uploadByFis $1"/"$file $INDEX
+        else
+            FILE_NAME=$1"/"$file
+            SIGN=$(getSign $FILE_NAME $SECRET)
+            DES=$(echo "$FILE_NAME" | sed "s#$(pwd)#$ODP_PATH#g")
+            (curl  -s -X POST $(echo $METHINE | awk -F '@' '{print $2}'):8020/fisreceiver.php -F "to=$DES" -F "file=@$FILE_NAME" -F "sign=$SIGN" )  &
+            let INDEX++
+            let PROGRESS=INDEX*100/FILE_TOTAL
+            echo $PROGRESS
+        fi
+    done
+    wait
+    echo $PROGRESS      # 输出当前进度，避免因返回值为0导致进度条展示为0
+}
+
+
+(uploadByFis $(pwd) 0)  | $(dirname $0)/dialog --ascii-lines --backtitle "pt-deploy" --title "正在上传模块{$MODULE_NAME}，请稍候..."  --gauge  "目标机器为：$DESTINATION($METHINE)" 10 70 $PROGRESS
+
+
+cd $WORKSPACE
+
+[ -d "output" ] && rm -rf output
+[ -d "temp" ] && rm -rf temp
