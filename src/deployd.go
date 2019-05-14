@@ -420,7 +420,7 @@ func InitAllConf(conf *map[string]map[string]map[string]string) {
 var conf = make(map[string]map[string]map[string]string)
 var desc = flag.String("host", "", "指定目标主机")
 var help = flag.Bool("help", false, "展示帮助信息")
-var uploadAll = flag.Bool("all", false, "编译上传 -w 选项指定目录下的所有文件")
+var uploadAll = flag.Bool("all", false, "编译上传 -watch 选项指定目录下的所有文件")
 var watchPath = flag.String("watch", ".", "指定要监听到发现变更后编译上传的目录")
 var modifyTime = flag.Int64("time", -1, "上传 n 秒内被修改的文件")
 
