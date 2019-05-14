@@ -13,18 +13,16 @@
 
 - [TOOLS](https://github.com/Pengfei-Gao/deployd)
 
-**使用`ptgoto`部署代码示例如下：**
-
-![](../assets/img/ptdeploy.png)
-
-**使用`ptdeploy`一键登录`tips`机器示例如下：**
-
-![](../assets/img/ptgoto.png)
 
 **使用`deployd`工具监听目录下文件变动实时上传示例如下：**
 
-![](../assets/img/deployd.png)
 
+![](./assets/img/deployd.png)
+
+
+**展示帮助信息：**
+
+![](./assets/img/deployd-help.png)
 
 # 二、安装
 
