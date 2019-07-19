@@ -47,7 +47,7 @@ function local_deploy(){
         #开始部署 jar 文件
         [[ ! $local_jar =~ "$SOURCE_JAR_FLAG" ]] && deploy_jar "$jar_regx" "$local_jar"
         
-        #开始不是 source jar 文件
+        #开始部署 source jar 文件
         [[ $local_jar =~ "$SOURCE_JAR_FLAG" ]] && deploy_source_jar "$jar_source_regx" "$local_jar"
     done
 }
