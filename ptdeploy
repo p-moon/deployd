@@ -110,7 +110,7 @@ function getSign(){
     FILE=$1                         # 要上传的文件路径
     KEY=$2                          # 用于计算签名的秘钥
     FILE_MD5=$(md5_file $FILE)      # 计算文件的MD5值
-    PLAIN_SIGN="$SECRET$FILE_MD5"
+    PLAIN_SIGN="$SECRET$FILE"
     SIGN=$(md5 $PLAIN_SIGN)
     echo $SIGN
 }

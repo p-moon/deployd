@@ -3,10 +3,13 @@ package main
 import (
 	"bufio"
 	"bytes"
+	"crypto/md5"
+	"encoding/hex"
 	"flag"
 	"fmt"
 	"io"
 	"io/ioutil"
+	"log"
 	"mime/multipart"
 	"net/http"
 	"os"
@@ -72,13 +75,10 @@ func FindRecentModifyFile(fileName string, interval int64, timestamp int64, noWa
 	return *result
 }
 
-func CopyFile(src, dst string) (int64, error) {
-
+func MkDir(dst string) (int64, error) {
 	dstArr := strings.Split(dst, string(os.PathSeparator))
-
-	fPath := string("")
 	dstLen := len(dstArr)
-
+	fPath := string("")
 	if dstLen > 1 {
 		for key, temp := range dstArr {
 
@@ -108,6 +108,15 @@ func CopyFile(src, dst string) (int64, error) {
 				}
 			}
 		}
+	}
+	return 0, nil
+}
+
+func CopyFile(src, dst string) (int64, error) {
+
+	_, err := MkDir(dst)
+	if err != nil {
+		fmt.Print(err)
 	}
 
 	sourceFileStat, err := os.Stat(src)
@@ -317,6 +326,40 @@ func UploadFile(filename string, targetUrl string, params map[string]string) err
 	return nil
 }
 
+func Md5SumFile(file string) (value [md5.Size]byte, err error) {
+	data, err := ioutil.ReadFile(file)
+	if err != nil {
+		return
+	}
+	value = md5.Sum(data)
+	return value, nil
+}
+
+func MD5Bytes(s []byte) string {
+	ret := md5.Sum(s)
+	return hex.EncodeToString(ret[:])
+}
+
+//计算字符串MD5值
+func MD5(s string) string {
+	return MD5Bytes([]byte(s))
+}
+
+//计算文件MD5值
+func MD5File(file string) (string, error) {
+	data, err := ioutil.ReadFile(file)
+	if err != nil {
+		return "", err
+	}
+	return MD5Bytes(data), nil
+}
+
+
+func GetSign(filepath string) string {
+	return MD5(signSecret + filepath)
+}
+
+
 func UploadByFis(path string) {
 	list, err := ioutil.ReadDir(path)
 	if err != nil {
@@ -341,6 +384,7 @@ func UploadByFis(path string) {
 		from := path + string(os.PathSeparator) + fi.Name()
 		to := strings.Replace(from, outputPath, odpPath, -1)
 		params["to"] = to
+		params["sign"] = GetSign(to)
 
 		// 异步上传
 		wg.Add(1)
@@ -417,14 +461,72 @@ func InitAllConf(conf *map[string]map[string]map[string]string) {
 	}
 }
 
+
+
+func ReceiveFileHandler(w http.ResponseWriter, r *http.Request) {
+	//设置内存大小
+	r.ParseMultipartForm(32 << 20)
+
+	// 获取部署路径
+	to := r.PostFormValue("to")
+	sign := r.PostFormValue("sign")
+
+	if sign != GetSign(to) {
+		fmt.Fprint(w, "sign error:" + GetSign(to) + ":" + to )
+		return
+	}
+
+
+	formFile, _, err := r.FormFile("file")
+	if err != nil {
+		fmt.Printf("Get form file failed: %s\n", err)
+		fmt.Fprint(w, err)
+		return
+	}
+	defer formFile.Close()
+
+	_, err = MkDir(to)
+	if err != nil {
+		fmt.Print(err)
+		fmt.Fprint(w, err)
+	}
+
+	// 创建保存文件
+	destFile, err := os.Create(to)
+	if err != nil {
+		log.Printf("Create failed: %s\n", err)
+		fmt.Fprint(w, err)
+		return
+	}
+
+	defer destFile.Close()
+
+	_, err = io.Copy(destFile, formFile)
+	if err != nil {
+		log.Printf("Write file failed: %s\n", err)
+		fmt.Fprint(w, err)
+		return
+	}
+	fmt.Fprint(w, "ok..")
+}
+
+
+func startDeploydServer(listen string){
+	signSecret = conf["watch"]["global"]["secret"]
+	http.HandleFunc("/upload", ReceiveFileHandler)
+	http.ListenAndServe(listen, nil)
+}
+
 var conf = make(map[string]map[string]map[string]string)
 var desc = flag.String("host", "", "指定目标主机")
 var help = flag.Bool("help", false, "展示帮助信息")
 var uploadAll = flag.Bool("all", false, "编译上传 -watch 选项指定目录下的所有文件")
 var watchPath = flag.String("watch", ".", "指定要监听到发现变更后编译上传的目录")
 var modifyTime = flag.Int64("time", -1, "上传 n 秒内被修改的文件")
+var listen  =  flag.String("listen",  "", "启动一个server，监听目标端口，例如：-listen 0:8080")
 
 var wg sync.WaitGroup
+var signSecret string
 
 func main() {
 
@@ -464,6 +566,12 @@ func main() {
 	//用于存储被修改的文件列表
 	result := make([]string, 0)
 
+	if *listen != "" {
+		startDeploydServer(*listen)
+		return
+	}
+
+
 	// 若 -help 或 未传入主机名 ，则展示帮助信息
 	if *help || *desc == "" {
 		flag.Usage()
@@ -474,6 +582,8 @@ func main() {
 		fmt.Println("输入目标：", *desc, "不合法， 请重新输入")
 		return
 	}
+
+	signSecret = conf["deploy"][*desc]["secret"]
 
 	// 若是 -time 模式，上传n秒内被修改的文件
 	if *modifyTime != -1 && *modifyTime > 0 {

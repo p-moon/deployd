@@ -150,6 +150,8 @@ deployd -time 3600 -watch . -host test311
 # 上传所有文件
 deployd -all -watch . -host test311
 
+# 监听8000端口，提供文件上传服务
+deployd -listen 0:8000
 ```
 
 
